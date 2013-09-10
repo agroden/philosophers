@@ -40,27 +40,25 @@ philosopher::philosopher(int id, unsigned int total_philosophers,
 	generate_n(seed, mt19937::state_size, std::ref(rand));
 	seed_seq seq(begin(seed), end(seed));
 	m_rng.seed(seq);
+
+	// assign unique locks to both chopsticks
+	m_left = unique_lock<mutex>(*(m_table[m_id]), defer_lock);
+	m_right = unique_lock<mutex>(*(m_table[(m_id + 1) % m_total_philosophers]), defer_lock);
 }
 
 philosopher::~philosopher() { }
 
 void philosopher::get_resources() {
-	mutex* left = m_table[m_id];
-	mutex* right = m_table[(m_id + 1) % m_total_philosophers];
-	lock(*left, *right);
-	lock_guard<mutex> l(*left, adopt_lock);
+	lock(m_left, m_right);
 	cout << "\tPhilosopher " << m_id << " picked up chopstick " << m_id << endl;
-	lock_guard<mutex> r(*right, adopt_lock);
 	cout << "\tPhilosopher " << m_id << " picked up chopstick " << (m_id + 1) 
 		<< endl;
 }
 
 void philosopher::release_resources() {
-	mutex* left = m_table[m_id];
-	mutex* right = m_table[(m_id + 1) % m_total_philosophers];
-	left->unlock();
+	m_left.unlock();
 	cout << "\tPhilosopher " << m_id << " put down chopstick " << m_id << endl;
-	right->unlock();
+	m_right.unlock();
 	cout << "\tPhilosopher " << m_id << " put down chopstick " << (m_id + 1) 
 		<< endl;
 }

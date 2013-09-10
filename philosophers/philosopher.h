@@ -51,6 +51,8 @@ namespace dining_philosophers {
 		std::uniform_int_distribution<unsigned int> m_think_dist;
 		unsigned int m_iterations;
 		std::mt19937 m_rng;
+		std::unique_lock<std::mutex> m_left;
+		std::unique_lock<std::mutex> m_right;
 	};
 };
 
