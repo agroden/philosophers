@@ -21,6 +21,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <atomic>
 #include <thread>
+#include <exception>
 
 namespace boilerplate {
 	/// runnable
@@ -31,9 +32,10 @@ namespace boilerplate {
 	public:
 		runnable() : m_stop(false), m_thread() { }
 		virtual ~runnable() { join(); }
+#ifndef WIN32
 		runnable(runnable const&) = delete;
 		runnable& operator=(runnable const&) = delete;
-		
+#endif
 		void start() { m_thread = std::thread(&runnable::run, this); }
 		void stop() { m_stop = true; }
 		void join() { if(m_thread.joinable()) m_thread.join(); }
@@ -43,6 +45,12 @@ namespace boilerplate {
 		virtual void run() = 0;
 		
 	private:
+#ifdef WIN32
+		// delete operator is not defined in visual c++ yet
+		// revisit this when it is
+		runnable(runnable const&);
+		runnable& operator=(runnable const&);
+#endif
 		std::atomic<bool> m_stop;
 		std::thread m_thread;
 	};
