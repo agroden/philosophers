@@ -11,3 +11,14 @@
 *.lai
 *.la
 *.a
+
+# Visual Studio files
+*.suo
+
+# Build directories
+Debug/*
+Release/*
+philosophers/Debug/*
+philosophers/Release/*
+philosophers/debug/*
+philosophers/release/*
