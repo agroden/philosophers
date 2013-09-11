@@ -19,6 +19,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #ifndef __PHILOSOPHERS_H__
 #define __PHILOSOPHERS_H__
 
+#include <string>
 #include <vector>
 #include <mutex>
 #include <memory>
@@ -42,6 +43,7 @@ namespace dining_philosophers {
 		virtual void get_resources();
 		virtual void release_resources();
 		virtual void run();
+		virtual void log(std::stringstream& str);
 	
 	private:
 		int m_id;
@@ -53,6 +55,7 @@ namespace dining_philosophers {
 		std::mt19937 m_rng;
 		std::unique_lock<std::mutex> m_left;
 		std::unique_lock<std::mutex> m_right;
+		static std::mutex m_mtx;
 	};
 };
 

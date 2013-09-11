@@ -20,12 +20,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <ctime>
 #include <chrono>
 #include <algorithm>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 
 #include "philosopher.h"
 
 using namespace std;
 using namespace dining_philosophers;
+
+std::mutex philosopher::m_mtx;
 
 philosopher::philosopher(int id, unsigned int total_philosophers, 
 	vector<mutex*> table, unsigned int max_eat_time, 
@@ -43,27 +47,36 @@ philosopher::philosopher(int id, unsigned int total_philosophers,
 
 	// assign unique locks to both chopsticks
 	m_left = unique_lock<mutex>(*(m_table[m_id]), defer_lock);
-	m_right = unique_lock<mutex>(*(m_table[(m_id + 1) % m_total_philosophers]), defer_lock);
+	m_right = unique_lock<mutex>(*(m_table[(m_id + 1) % m_total_philosophers]), 
+		defer_lock);
 }
 
 philosopher::~philosopher() { }
 
 void philosopher::get_resources() {
+	auto start = std::chrono::high_resolution_clock::now();
 	lock(m_left, m_right);
-	cout << "\tPhilosopher " << m_id << " picked up chopstick " << m_id << endl;
-	cout << "\tPhilosopher " << m_id << " picked up chopstick " << (m_id + 1) 
-		<< endl;
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto elapsed = stop - start;
+	auto duration = chrono::duration<double, std::milli>(elapsed);
+	std::stringstream ss;
+	ss << "\tPhilosopher " << m_id << " waited " << std::fixed << 
+		std::setprecision(2) << duration.count() << 
+		" ms to pick up chopsticks " << m_id << " and " << (m_id + 1);
+	log(ss);
 }
 
 void philosopher::release_resources() {
 	m_left.unlock();
-	cout << "\tPhilosopher " << m_id << " put down chopstick " << m_id << endl;
 	m_right.unlock();
-	cout << "\tPhilosopher " << m_id << " put down chopstick " << (m_id + 1) 
-		<< endl;
+	std::stringstream ss;
+	ss << "\tPhilosopher " << m_id << " put down chopsticks " << m_id << 
+		" and " << (m_id + 1);
+	log(ss);
 }
 
 void philosopher::run() {
+	std::stringstream ss;
 	for (unsigned int i = 0; i < m_iterations; ++i) {
 		if (stopped()) // respect the stop command
 			break;
@@ -73,23 +86,31 @@ void philosopher::run() {
 		chrono::milliseconds think_time(m_think_dist(m_rng));
 		
 		// think
-		cout << "(" << i << ") Philosopher " << m_id << " is thinking..." 
-			<< endl;
+		ss << "(" << i << ") Philosopher " << m_id << " is thinking...";
+		log(ss);
 		this_thread::sleep_for(think_time);
-		cout << "(" << i << ") Philosopher " << m_id << " thought for " 
-			<< think_time.count() << " milliseconds" << endl;
+		ss << "(" << i << ") Philosopher " << m_id << " thought for " << 
+			think_time.count() << " ms";
+		log(ss);
 		
 		// grab some chopsticks
 		get_resources();
 		
 		// eat
-		cout << "(" << i << ") Philosopher " << m_id << " is eating..." 
-			<< endl;
+		ss << "(" << i << ") Philosopher " << m_id << " is eating...";
+		log(ss);
 		this_thread::sleep_for(eat_time);
-		cout << "(" << i << ") Philosopher " << m_id << " ate for " << 
-			eat_time.count() << " milliseconds" << endl;
+		ss << "(" << i << ") Philosopher " << m_id << " ate for " << 
+			eat_time.count() << " ms";
+		log(ss);
 		
 		// put down chopsticks
 		release_resources();
 	}
+}
+
+void philosopher::log(std::stringstream& ss) {
+	std::lock_guard<std::mutex> lock(m_mtx);
+	cout << ss.str() << endl;
+	ss.str("");
 }
