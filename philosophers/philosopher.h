@@ -34,9 +34,8 @@ namespace dining_philosophers {
 	 */
 	class philosopher : public boilerplate::runnable {
 	public:
-		philosopher(int id, unsigned int total_philosophers, 
-			std::vector<std::mutex*> table, unsigned int max_eat_time, 
-			unsigned int max_think_time, unsigned int iterations);
+		philosopher(int id, std::vector<std::mutex*> table, 
+			unsigned int max_eat, unsigned int max_think, unsigned int iters);
 		virtual ~philosopher();
 		
 	protected:
@@ -47,15 +46,15 @@ namespace dining_philosophers {
 	
 	private:
 		int m_id;
-		unsigned int m_total_philosophers;
 		std::vector<std::mutex*> m_table;
 		std::uniform_int_distribution<unsigned int> m_eat_dist;
 		std::uniform_int_distribution<unsigned int> m_think_dist;
-		unsigned int m_iterations;
-		std::mt19937 m_rng;
+		const unsigned int m_max_iter;
+		unsigned int m_curr_iter;
 		std::unique_lock<std::mutex> m_left;
 		std::unique_lock<std::mutex> m_right;
-		static std::mutex m_mtx;
+		static std::mt19937 s_rng;
+		static std::mutex s_mtx;
 	};
 };
 

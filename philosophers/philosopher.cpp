@@ -29,25 +29,24 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 using namespace std;
 using namespace dining_philosophers;
 
-std::mutex philosopher::m_mtx;
+std::mutex philosopher::s_mtx;
+std::mt19937 philosopher::s_rng;
 
-philosopher::philosopher(int id, unsigned int total_philosophers, 
-	vector<mutex*> table, unsigned int max_eat_time, 
-	unsigned int max_think_time, unsigned int iterations) : 
-	m_id(id), m_total_philosophers(total_philosophers),
-	m_table(table), m_eat_dist(1, max_eat_time), 
-	m_think_dist(1, max_think_time), m_iterations(iterations) {
+philosopher::philosopher(int id, vector<mutex*> table, unsigned int max_eat, 
+	unsigned int max_think, unsigned int iters) : 
+	m_id(id), m_table(table), m_eat_dist(1, max_eat), 
+	m_think_dist(1, max_think), m_max_iter(iters) {
 	
 	// seed the random number generator
 	uint_least32_t seed[mt19937::state_size];
 	random_device rand;
 	generate_n(seed, mt19937::state_size, std::ref(rand));
 	seed_seq seq(begin(seed), end(seed));
-	m_rng.seed(seq);
+	s_rng.seed(seq);
 
 	// assign unique locks to both chopsticks
 	m_left = unique_lock<mutex>(*(m_table[m_id]), defer_lock);
-	m_right = unique_lock<mutex>(*(m_table[(m_id + 1) % m_total_philosophers]), 
+	m_right = unique_lock<mutex>(*(m_table[(m_id + 1) % m_table.size()]), 
 		defer_lock);
 }
 
@@ -60,8 +59,8 @@ void philosopher::get_resources() {
 	auto elapsed = stop - start;
 	auto duration = chrono::duration<double, std::milli>(elapsed);
 	std::stringstream ss;
-	ss << "\tPhilosopher " << m_id << " waited " << std::fixed << 
-		std::setprecision(2) << duration.count() << 
+	ss << "\t(" << m_curr_iter << ") Philosopher " << m_id << " waited " << 
+		std::fixed << std::setprecision(2) << duration.count() << 
 		" ms to pick up chopsticks " << m_id << " and " << (m_id + 1);
 	log(ss);
 }
@@ -70,37 +69,38 @@ void philosopher::release_resources() {
 	m_left.unlock();
 	m_right.unlock();
 	std::stringstream ss;
-	ss << "\tPhilosopher " << m_id << " put down chopsticks " << m_id << 
-		" and " << (m_id + 1);
+	ss << "\t(" << m_curr_iter << ") Philosopher " << m_id << 
+		" put down chopsticks " << m_id << " and " << (m_id + 1);
 	log(ss);
 }
 
 void philosopher::run() {
 	std::stringstream ss;
-	for (unsigned int i = 0; i < m_iterations; ++i) {
+	for (m_curr_iter = 0; m_curr_iter < m_max_iter; ++m_curr_iter) {
 		if (stopped()) // respect the stop command
 			break;
 		
 		// decide the amount of time to eat and think every iteration
-		chrono::milliseconds eat_time(m_eat_dist(m_rng));
-		chrono::milliseconds think_time(m_think_dist(m_rng));
+		chrono::milliseconds eat_time(m_eat_dist(s_rng));
+		chrono::milliseconds think_time(m_think_dist(s_rng));
 		
 		// think
-		ss << "(" << i << ") Philosopher " << m_id << " is thinking...";
+		ss << "(" << m_curr_iter << ") Philosopher " << m_id << 
+			" is thinking...";
 		log(ss);
 		this_thread::sleep_for(think_time);
-		ss << "(" << i << ") Philosopher " << m_id << " thought for " << 
-			think_time.count() << " ms";
+		ss << "(" << m_curr_iter << ") Philosopher " << m_id << 
+			" thought for " << think_time.count() << " ms";
 		log(ss);
 		
 		// grab some chopsticks
 		get_resources();
 		
 		// eat
-		ss << "(" << i << ") Philosopher " << m_id << " is eating...";
+		ss << "(" << m_curr_iter << ") Philosopher " << m_id << " is eating...";
 		log(ss);
 		this_thread::sleep_for(eat_time);
-		ss << "(" << i << ") Philosopher " << m_id << " ate for " << 
+		ss << "(" << m_curr_iter << ") Philosopher " << m_id << " ate for " << 
 			eat_time.count() << " ms";
 		log(ss);
 		
@@ -110,7 +110,7 @@ void philosopher::run() {
 }
 
 void philosopher::log(std::stringstream& ss) {
-	std::lock_guard<std::mutex> lock(m_mtx);
+	std::lock_guard<std::mutex> lock(s_mtx);
 	cout << ss.str() << endl;
 	ss.str("");
 }
