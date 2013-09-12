@@ -89,8 +89,8 @@ int main(int argc, const char* argv[]) {
 	// create the philosophers and get them started
 	list<philosopher*> philosophers;
 	for (unsigned int i = 0; i < num_philosophers; ++i) {
-		philosophers.push_back(new philosopher(i, num_philosophers, table, 
-			eat_time, think_time, iterations));
+		philosophers.push_back(new philosopher(i, table, eat_time, think_time, 
+			iterations));
 		philosophers.back()->start();
 	}
 	
